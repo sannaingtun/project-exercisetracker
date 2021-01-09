@@ -82,6 +82,11 @@ app.post('/api/exercise/new-user', (req, res) => {
   })
 });
 
+// api/exercise/users
+app.get('api/exercise/users', (req, res) => {
+  res.json({hi: "hi"})
+});
+
 
 const listener = app.listen(process.env.PORT || 3000, () => {
   console.log('Your app is listening on port ' + listener.address().port)
