@@ -11,6 +11,27 @@ app.use(bodyParser.json());
 app.use(cors())
 app.use(express.static('public'))
 
+const router = express.Router();
+
+const enableCORS = function (req, res, next) {
+  if (!process.env.DISABLE_XORIGIN) {
+    const allowedOrigins = ["https://www.freecodecamp.org"];
+    const origin = req.headers.origin;
+    if (!process.env.XORIGIN_RESTRICT || allowedOrigins.indexOf(origin) > -1) {
+      console.log(req.method + " " + req.path );
+      res.set({
+        "Access-Control-Allow-Origin": origin,
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers":
+          "Origin, X-Requested-With, Content-Type, Accept",
+      });
+    }
+  }
+  next();
+};
+
+app.use("/api", enableCORS, router);
+
 // create connection to DB
 let mongoose;
 try {
@@ -28,6 +49,13 @@ const UserSchema = new Schema({
   username: String
 })
 User = mongoose.model("User", UserSchema);
+
+// create log model
+let Log;
+const LogSchema = new Schema({
+  username: String
+})
+Log = mongoose.model("Log", LogSchema);
 
 app.get('/', (req, res) => {
   res.sendFile(__dirname + '/views/index.html')
@@ -59,32 +87,34 @@ const CreateAndSaveUser = async (username, done) => {
 }
 
 // /api/exercise/new-user
-app.post('/api/exercise/new-user', (req, res) => {
+router.post('/exercise/new-user', async (req, res) => {
   // find one by usename
-  findOneByUserName(req.body.username, async (err, result) => {
+  console.log("req.body.username :" + req.body.username)
+  findOneByUserName(req.body.username, async (err, result1) => {
+    console.log("findOneByUserName : " + result1)
     if (err) return res.json(err);
-    if (result != "") {
-      return res.json({_id: result._id, username: result.username});
+    if (result1 != "") {      
+      return res.json({_id: result1._id, username: result1.username});
+    } else {
+      console.log("Before CreateAndSaveUser")
+      // if no existing data
+      CreateAndSaveUser(req.body.username, async(err, doc) => {
+        if (err) return res.json(err);
+        console.log("CreateAndSaveUser: " + doc)
+        return res.json(doc);
+      })
     }
   })
-  // find one by _id
-  findOneById(req.body._id, async (err, result) => {
-    if (err) return res.json(err);
-    if (result != "") {
-      return res.json({_id: result._id, username: result.username});
-    }
-  })
-  // if no existing data
-  CreateAndSaveUser(req.body.username, async(err, doc) => {
-    if (err) return res.json(err);
-    console.log(doc)
-    return res.json({_id: doc._id, username: doc.username});
-  })
+  
 });
 
 // api/exercise/users
-app.get('api/exercise/users', (req, res) => {
-  res.json({hi: "hi"})
+router.get('/exercise/users', (req, res) => {
+  User.find({}, function(err, result) {
+    if (err) return res.json(err);
+    console.log(result)
+    return res.json(result);
+  });
 });
 
 
